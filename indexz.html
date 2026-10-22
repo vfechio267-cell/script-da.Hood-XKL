@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VXAS HUB - Game Control Panel</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            red: '#ff003c',
+                            darkred: '#990024',
+                            glow: '#ff1e53',
+                            bg: '#0a0a0c',
+                            card: '#121216',
+                            border: '#24242d',
+                            accent: '#181820'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'red-glow': '0 0 15px rgba(255, 0, 60, 0.4)',
+                        'red-glow-lg': '0 0 25px rgba(255, 0, 60, 0.6)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0c;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #24242d;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ff003c;
+        }
+
+        /* Switch styling */
+        .switch-checkbox:checked + .switch-label {
+            background-color: #ff003c;
+            box-shadow: 0 0 10px rgba(255, 0, 60, 0.5);
+        }
+        .switch-checkbox:checked + .switch-label .switch-ball {
+            transform: translateX(100%);
+        }
+
+        /* Range slider custom styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: #181820;
+            border-radius: 9999px;
+            height: 6px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: #ff003c;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(255, 0, 60, 0.8);
+            transition: transform 0.1s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Glassmorphism background */
+        .glass-panel {
+            background: rgba(18, 18, 22, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 0, 60, 0.15);
+        }
+        .glass-panel-active {
+            border: 1px solid rgba(255, 0, 60, 0.5);
+            box-shadow: 0 0 15px rgba(255, 0, 60, 0.2);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+        .animate-shake {
+            animation: shake 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-brand-bg text-gray-200 font-sans min-h-screen flex flex-col justify-between selection:bg-brand-red selection:text-white overflow-x-hidden">
+
+    <!-- LOGIN OVERLAY MODAL -->
+    <div id="login-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 transition-opacity duration-500">
+        <div class="glass-panel-active bg-brand-card/95 border border-brand-red/40 p-8 rounded-2xl max-w-md w-full shadow-red-glow-lg flex flex-col gap-6 relative overflow-hidden">
+            <!-- Decorative Accent Bar -->
+            <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-brand-red to-transparent"></div>
+
+            <div class="text-center space-y-2">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-brand-red/20 text-brand-red border border-brand-red/40 mb-2 shadow-red-glow">
+                    <i class="fa-solid font-black fa-crosshairs text-2xl"></i>
+                </div>
+                <!-- YouTube Link Badge on Login Screen -->
+                <div class="flex justify-center mb-1">
+                    <a href="https://pt.anotepad.com/note/read/3gngmsn4" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/20 border border-red-500/40 text-red-400 hover:text-white hover:bg-red-600/40 transition-all text-xs font-semibold">
+                        <i class="fa-brands fa-youtube text-red-500 text-sm"></i>
+                        <span>Inscreva-se no Canal</span>
+                    </a>
+                </div>
+                <h2 class="text-2xl font-black tracking-wider text-white">VXAS <span class="text-brand-red">HUB</span></h2>
+                <p class="text-xs text-gray-400">Insira suas credenciais para acessar o painel</p>
+            </div>
+
+            <!-- Error Alert Message -->
+            <div id="login-error" class="hidden bg-red-950/80 border border-brand-red text-red-300 text-xs p-3 rounded-lg flex items-center gap-2 animate-shake">
+                <i class="fa-solid fa-circle-exclamation text-brand-red text-sm"></i>
+                <span id="login-error-text">Por favor, insira um nome de usuário.</span>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Usuário</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
+                        <input type="text" id="login-username" required placeholder="Digite qualquer nome" class="w-full bg-brand-accent/80 border border-brand-border focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none transition-all">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Senha</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-key absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
+                        <input type="password" id="login-password" placeholder="Qualquer senha é aceita" class="w-full bg-brand-accent/80 border border-brand-border focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none transition-all">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full mt-2 bg-brand-red hover:bg-brand-darkred text-white font-bold py-3 rounded-xl transition-all duration-200 shadow-red-glow hover:shadow-red-glow-lg flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i> Acessar Painel
+                </button>
+            </form>
+
+            <div class="text-center border-t border-brand-border/60 pt-4">
+                <span class="text-[11px] text-gray-500 font-mono">Acesso livre: Digite qualquer usuário e senha</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Navigation Bar -->
+    <header class="glass-panel sticky top-0 z-50 px-6 py-4 flex items-center justify-between border-b border-brand-border">
+        <div class="flex items-center gap-3">
+            <div class="bg-brand-red p-2 rounded-lg text-white shadow-red-glow">
+                <i class="fa-solid font-black fa-crosshairs text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-extrabold tracking-wider text-white flex items-center gap-2">
+                    VXAS <span class="text-brand-red">HUB</span>
+                    <span class="text-xs font-mono px-2 py-0.5 rounded bg-brand-red/20 text-brand-red border border-brand-red/30">v3.4 Pro</span>
+                </h1>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <!-- YouTube Channel Link Button -->
+            <a href="https://pt.anotepad.com/note/read/3gngmsn4" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600/20 border border-red-500/40 text-red-400 hover:bg-red-600/40 hover:text-white transition-all text-xs font-semibold shadow-red-glow">
+                <i class="fa-brands fa-youtube text-base text-red-500"></i>
+                <span class="hidden sm:inline">YouTube</span>
+            </a>
+
+            <!-- Shortcut Hint Badge -->
+            <div class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-accent border border-brand-border text-xs text-gray-300">
+                <span class="text-gray-400">Atalho:</span>
+                <kbd class="px-2 py-0.5 bg-brand-bg border border-brand-border rounded text-brand-red font-mono font-bold">[ / ]</kbd>
+                <span class="text-gray-400">Abrir/Fechar</span>
+            </div>
+
+            <!-- Status Badge -->
+            <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Status: Undetected
+            </div>
+
+            <!-- Profile / User -->
+            <div class="flex items-center gap-3 border-l border-brand-border pl-6">
+                <div class="text-right hidden sm:block">
+                    <p id="display-user-name" class="text-sm font-semibold text-white leading-none">VIP_User_99</p>
+                    <p class="text-xs text-gray-400 mt-1">Premium License</p>
+                </div>
+                <div class="w-10 h-10 rounded-full border-2 border-brand-red p-0.5 shadow-red-glow">
+                    <img id="display-avatar" src="https://placehold.co/100x100/181820/ff003c?text=VX" alt="Avatar" class="w-full h-full rounded-full object-cover">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- FLOATING TOGGLE NOTIFICATION (Shown when hidden) -->
+    <div id="panel-hidden-indicator" class="hidden fixed bottom-6 right-6 z-50 bg-brand-card/95 border border-brand-red/50 shadow-red-glow p-4 rounded-xl flex items-center gap-3 text-sm text-white animate-bounce">
+        <i class="fa-solid fa-eye-slash text-brand-red text-lg"></i>
+        <div>
+            <p class="font-bold">Painel Oculto</p>
+            <p class="text-xs text-gray-400">Pressione <kbd class="px-1.5 py-0.5 bg-brand-bg border border-brand-border rounded text-brand-red font-mono font-bold">/</kbd> para reabrir</p>
+        </div>
+    </div>
+
+    <!-- Main Content Layout -->
+    <div id="main-dashboard-container" class="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto p-4 md:p-6 gap-6 transition-all duration-300">
+        
+        <!-- Sidebar Tabs -->
+        <aside class="w-full md:w-64 flex flex-row md:flex-col gap-2 glass-panel p-3 rounded-2xl h-fit overflow-x-auto">
+            <button onclick="switchTab('combat')" id="tab-combat" class="tab-btn active flex items-center gap-3 px-4 py-3 rounded-xl text-left font-medium text-sm transition-all duration-200 bg-brand-red/20 text-white border border-brand-red/40 shadow-red-glow whitespace-nowrap">
+                <i class="fa-solid fa-gun text-brand-red w-5 text-center"></i>
+                Combat & Aim
+            </button>
+            <button onclick="switchTab('visuals')" id="tab-visuals" class="tab-btn flex items-center gap-3 px-4 py-3 rounded-xl text-left font-medium text-sm text-gray-400 hover:text-white hover:bg-brand-accent transition-all duration-200 whitespace-nowrap">
+                <i class="fa-solid fa-eye w-5 text-center"></i>
+                ESP & Visuals
+            </button>
+            <button onclick="switchTab('movement')" id="tab-movement" class="tab-btn flex items-center gap-3 px-4 py-3 rounded-xl text-left font-medium text-sm text-gray-400 hover:text-white hover:bg-brand-accent transition-all duration-200 whitespace-nowrap">
+                <i class="fa-solid fa-bolt w-5 text-center"></i>
+                Movement & Physics
+            </button>
+            <button onclick="switchTab('exploits')" id="tab-exploits" class="tab-btn flex items-center gap-3 px-4 py-3 rounded-xl text-left font-medium text-sm text-gray-400 hover:text-white hover:bg-brand-accent transition-all duration-200 whitespace-nowrap">
+                <i class="fa-solid fa-skull text-brand-red w-5 text-center"></i>
+                Extreme Exploits
+            </button>
+        </aside>
+
+        <!-- Dynamic Content Section -->
+        <main class="flex-1 glass-panel p-6 rounded-2xl min-h-[500px]">
+            
+            <!-- SECTION 1: COMBAT & AIM -->
+            <div id="section-combat" class="tab-content block space-y-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-gun text-brand-red"></i> Combat & Precision Tools
+                    </h2>
+                    <p class="text-sm text-gray-400">Configure aim assistance, recoil dampening, and automated trigger response.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <!-- Feature Card: Aimbot -->
+                    <div class="bg-brand-card border border-brand-border p-4 rounded-xl flex flex-col justify-between gap-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="font-bold text-white">Aimbot / Aim Lock</h3>
+                                    <span class="text-[10px] uppercase tracking-wider font-bold bg-brand-red/20 text-brand-red px-2 py-0.5 rounded border border-brand-red/30">Popular</span>
+                                </div>
+                                <p class="text-xs text-gray-400 mt-1">Automatically locks crosshair onto closest enemy head or torso.</p>
+                            </div>
+                            <div class="relative inline-block w-12 h-6 align-middle select-none">
+                                <input type="checkbox" id="toggle-aimbot" class="switch-checkbox hidden" onchange="playToggleSound()">
+                                <label for="toggle-aimbot" class="switch-label block overflow-hidden h-6 rounded-full bg-brand-accent cursor-pointer transition-colors duration-200">
+                                    <span class="switch-ball block w-5 h-5 rounded-full bg-white m-0.5 transition-transform duration-200"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-brand-border/50 text-xs text-gray-400">
+                            <span>Bind: <button onclick="assignKeybind(this)" class="bg-brand-accent px-2 py-1 rounded text-white font-mono hover:border hover:border-brand-red">MB2</button></span>
+                            <span class="text-gray-500">Smoothness: 85%</span>
+                        </div>
+                    </div>
+
+                    <!-- Feature Card: Silent Aim -->
+                    <div class="bg-brand-card border border-brand-border p-4 rounded-xl flex flex-col justify-between gap-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="font-bold text-white">Silent Aim</h3>
+                                <p class="text-xs text-gray-400 mt-1">Redirects bullet trajectories to target without changing camera view.</p>
+                            </div>
+                            <div class="relative inline-block w-12 h-6 align-middle select-none">
+                                <input type="checkbox" id="toggle-silentaim" class="switch-checkbox hidden" onchange="playToggleSound()">
+                                <label for="toggle-silentaim" class="switch-label block overflow-hidden h-6 rounded-full bg-brand-accent cursor-pointer transition-colors duration-200">
+                                    <span class="switch-ball block w-5 h-5 rounded-full bg-white m-0.5 transition-transform duration-200"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-brand-border/50 text-xs text-gray-400">
+                            <span>Bind: <button onclick="assignKeybind(this)" class="bg-brand-accent px-2 py-1 rounded text-white font-mono hover:border hover:border-brand-red">None</button></span>
+                            <span class="text-gray-500">FOV: 120°</span>
+                        </div>
+                    </div>
+
+                    <!-- Feature Card: Triggerbot -->
+                    <div class="bg-brand-card border border-brand-border p-4 rounded-xl flex flex-col justify-between gap-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="font-bold text-white">Triggerbot</h3>
+                                <p class="text-xs text-gray-400 mt-1">Automatically fires weapon the millisecond crosshair hovers over an enemy.</p>
+                            </div>
+                            <div class="relative inline-block w-12 h-6 align-middle select-none">
+                                <input type="checkbox" id="toggle-triggerbot" class="switch-checkbox hidden" onchange="playToggleSound()">
+                                <label for="toggle-triggerbot" class="switch-label block overflow-hidden h-6 rounded-full bg-brand-accent cursor-pointer transition-colors duration-200">
+                                    <span class="switch-ball block w-5 h-5 rounded-full bg-white m-0.5 transition-transform duration-200"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-brand-border/50 text-xs text-gray-400">
+                            <span>Bind: <button onclick="assignKeybind(this)" class="bg-brand-accent px-2 py-1 rounded text-white font-mono hover:border hover:border-brand-red">X</button></span>
+                            <span class="text-gray-500">Delay: 10ms</span>
+                        </div>
+                    </div>
+
+                    <!-- Feature Card: No Recoil / No Spread -->
+                    <div class="bg-brand-card border border-brand-border p-4 rounded-xl flex flex-col justify-between gap-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="font-bold text-white">No Recoil / No Spread</h3>
+                                <p class="text-xs text-gray-400 mt-1">Eliminates gun kickback and bullet dispersion for pin-point accuracy.</p>
+                            </div>
+                            <div class="relative inline-block w-12 h-6 align-middle select-none">
+                                <input type="checkbox" id="toggle-norecoil" class="switch-checkbox hidden" checked onchange="playToggleSound()">
+                                <label for="toggle-norecoil" class="switch-label block overflow-hidden h-6 rounded-full bg-brand-accent cursor-pointer transition-colors duration-200">
+                                    <span class="switch-ball block w-5 h-5 rounded-full bg-white m-0.5 transition-transform duration-200"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-brand-border/50 text-xs text-gray-400">
+                            <span>Passive Modifier</span>
+                            <span class="text-emerald-400">Active</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: ESP & VISUALS -->
+            <div id="section-visuals" class="tab-content hidden space-y-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-eye text-brand-red"></i> Visual Enhancement & Wallhacks
+                    </h2>
+                    <p class="text-sm text-gray-400">Gain full tactical awareness through terrain and obstacles.</p>
+                </div>
+
+                <!-- Sliders for Visuals -->
+                <div class="bg-brand-card border border-brand-border p-5 rounded-xl space-y-5">
+                    <!-- FOV Slider (0 - 1000) -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="font-medium text-white flex items-center gap-2">
+                                <i class="fa-solid fa-expand text-brand-red"></i> Camera FOV / Radius (0 - 1000)
+                            </span>
+                            <span id="fov-val" class="text-brand-red font-mono font-bold">120°</span>
+                        </div>
+                        <input type="range" id="slider-fov" min="0" max="1000" step="1" value="120" class="w-full" oninput="document.getElementById('fov-val').innerText = this.value + '°'">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <!-- Feature Card: ESP Box & Name -->
+                    <div class="bg-brand-card border border-brand-border p-4 rounded-xl flex flex-col justify-between gap-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="font-bold text-white">ESP Boxes & Names</h3>
+                                <p class="text-xs text-gray-400 mt-1">Draws bounding boxes, health bars, and player names through walls.</p>
+                            </div>
+                            <div class="relative inline-block w-12 h-6 align-middle select-none">
+                                <input type="checkbox" id="toggle-esp" class="switch-checkbox hidden" checked onchange="playToggleSound()">
+                                <label for="toggle-esp" class="switch-label block overflow-hidden h-6 rounded-full bg-brand-accent cursor-pointer transition-colors duration-200">
+                                    <span class="switch-ball block w-5 h-5 rounded-full bg-white m-0.5 transition-transform duration-200"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Feature Card: Radar Hack -->
+                    <div class="bg-brand-card border border-brand-border p-4 rounded-xl flex flex-col justify-between gap-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="font-bold text-white">Radar Hack / Minimap</h3>
+                                <p class="text-xs text-gray-400 mt-1">Displays all enemy positions on a 2D overlay radar map.</p>
+                            </div>
+                            <div class="relative inline-block w-12 h-6 align-middle select-none">
+                                <input type="checkbox" id="toggle-radar" class="switch-checkbox hidden" onchange="playToggleSound()">
+                                <label for="toggle-radar" class="switch-label block overflow-hidden h-6 rounded-full bg-brand-accent cursor-pointer transition-colors duration-200">
+                                    <span class="switch-ball block w-5 h-5 rounded-full bg-white m-0.5 transition-transform duration-200"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 3: MOVEMENT & PHYSICS -->
+            <div id="section-movement" class="tab-content hidden space-y-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-bolt text-brand-red"></i> Movement & Physics Modifications
+                    </h2>
+                    <p class="text-sm text-gray-400">Bypass velocity limits, gravity constraints, and collision rules.</p>
+                </div>
+
+                <!-- Sliders Section -->
+                <div class="bg-brand-card border border-brand-border p-5 rounded-xl space-y-5">
+                    <!-- WalkSpeed Slider -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="font-medium text-white flex items-center gap-2">
+                                <i class="fa-solid fa-person-running text-brand-red"></i> WalkSpeed Multiplier
+                            </span>
+                            <span id="speed-val" class="text-brand-red font-mono font-bold">16 (Default)</span>
+                        </div>
+                        <input type="range" id="slider-speed" min="16" max="250" value="16" class="w-full" oninput="document.getElementById('speed-val').innerText = this.value + 'x'">
+                    </div>
+
+                    <!-- JumpPower Slider -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="font-medium text-white flex items-center gap-2">
+                                <i class="fa-solid fa-arrows-up-to-line text-brand-red"></i> JumpPower Override
+                            </span>
+                            <span id="jump-val" class="text-brand-red font-mono font-bold">50 (Default)</span>
+                        </div>
+                        <input type="range" id="slider-jump" min="50" max="500" value="50" class="w-full" oninput="document.getElementById('jump-val').innerText = this.value + ' pts'">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <!-- Feature Card: Noclip -->
+                    <div class="bg-brand-card border border-brand-border p-4 rounded-xl flex flex-col justify-between gap-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="font-bold text-white">Noclip</h3>
+                                <p class="text-xs text-gray-400 mt-1">Disables wall collision, allowing passage through solid objects.</p>
+                            </div>
+                            <div class="relative inline-block w-12 h-6 align-middle select-none">
+                                <input type="checkbox" id="toggle-noclip" class="switch-checkbox hidden" onchange="playToggleSound()">
+                                <label for="toggle-noclip" class="switch-label block overflow-hidden h-6 rounded-full bg-brand-accent cursor-pointer transition-colors duration-200">
+                                    <span class="switch-ball block w-5 h-5 rounded-full bg-white m-0.5 transition-transform duration-200"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-brand-border/50 text-xs text-gray-400">
+                            <span>Bind: <button onclick="assignKeybind(this)" class="bg-brand-accent px-2 py-1 rounded text-white font-mono hover:border hover:border-brand-red">V</button></span>
+                        </div>
+                    </div>
+
+                    <!-- Feature Card: Fly -->
+                    <div class="bg-brand-card border border-brand-border p-4 rounded-xl flex flex-col justify-between gap-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="font-bold text-white">Fly / Levitation</h3>
+                                <p class="text-xs text-gray-400 mt-1">3D free-cam style directional flight through key controls.</p>
+                            </div>
+                            <div class="relative inline-block w-12 h-6 align-middle select-none">
+                                <input type="checkbox" id="toggle-fly" class="switch-checkbox hidden" onchange="playToggleSound()">
+                                <label for="toggle-fly" class="switch-label block overflow-hidden h-6 rounded-full bg-brand-accent cursor-pointer transition-colors duration-200">
+                                    <span class="switch-ball block w-5 h-5 rounded-full bg-white m-0.5 transition-transform duration-200"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-brand-border/50 text-xs text-gray-400">
+                            <span>Bind: <button onclick="assignKeybind(this)" class="bg-brand-accent px-2 py-1 rounded text-white font-mono hover:border hover:border-brand-red">E</button></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 4: EXTREME EXPLOITS -->
+            <div id="section-exploits" class="tab-content hidden space-y-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-skull text-brand-red"></i> Extreme Exploits & Teleportation
+                    </h2>
+                    <p class="text-sm text-gray-400">High-impact server manipulation and direct targeting tools.</p>
+                </div>
+
+                <!-- Sliders for Exploits -->
+                <div class="bg-brand-card border border-brand-border p-5 rounded-xl space-y-5">
+                    <!-- Reach Range Slider -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="font-medium text-white flex items-center gap-2">
+                                <i class="fa-solid fa-ruler-horizontal text-brand-red"></i> Melee Reach Distance
+                            </span>
+                            <span id="reach-val" class="text-brand-red font-mono font-bold">5 studs</span>
+                        </div>
+                        <input type="range" id="slider-reach" min="5" max="100" value="5" class="w-full" oninput="document.getElementById('reach-val').innerText = this.value + ' studs'">
+                    </div>
+
+                    <!-- Hitbox Expander Slider -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="font-medium text-white flex items-center gap-2">
+                                <i class="fa-solid fa-expand text-brand-red"></i> Enemy Hitbox Extender Size
+                            </span>
+                            <span id="hitbox-val" class="text-brand-red font-mono font-bold">1x (Normal)</span>
+                        </div>
+                        <input type="range" id="slider-hitbox" min="1" max="25" value="1" class="w-full" oninput="document.getElementById('hitbox-val').innerText = this.value + 'x'">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <!-- Feature: Bring Player -->
+                    <div class="bg-brand-card border border-brand-border p-4 rounded-xl flex flex-col justify-between gap-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="font-bold text-white">Bring Target / Bring All</h3>
+                                <p class="text-xs text-gray-400 mt-1">Forces enemy coordinates to synchronize directly in front of your weapon.</p>
+                            </div>
+                            <div class="relative inline-block w-12 h-6 align-middle select-none">
+                                <input type="checkbox" id="toggle-bring" class="switch-checkbox hidden" onchange="playToggleSound()">
+                                <label for="toggle-bring" class="switch-label block overflow-hidden h-6 rounded-full bg-brand-accent cursor-pointer transition-colors duration-200">
+                                    <span class="switch-ball block w-5 h-5 rounded-full bg-white m-0.5 transition-transform duration-200"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Feature: Invisibility / Desync -->
+                    <div class="bg-brand-card border border-brand-border p-4 rounded-xl flex flex-col justify-between gap-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="font-bold text-white">Full Invisibility / Desync</h3>
+                                <p class="text-xs text-gray-400 mt-1">Decouples client character position from server view rendering you invisible.</p>
+                            </div>
+                            <div class="relative inline-block w-12 h-6 align-middle select-none">
+                                <input type="checkbox" id="toggle-invis" class="switch-checkbox hidden" onchange="playToggleSound()">
+                                <label for="toggle-invis" class="switch-label block overflow-hidden h-6 rounded-full bg-brand-accent cursor-pointer transition-colors duration-200">
+                                    <span class="switch-ball block w-5 h-5 rounded-full bg-white m-0.5 transition-transform duration-200"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Footer Controls Bar -->
+    <footer class="glass-panel px-6 py-4 mt-6 border-t border-brand-border flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-2 text-xs text-gray-400">
+            <span class="w-2 h-2 rounded-full bg-brand-red"></span>
+            <span class="font-medium text-white" id="active-count">0</span> Funções ativas no momento
+        </div>
+
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+            <button onclick="resetSettings()" class="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-brand-accent border border-brand-border hover:bg-brand-border text-xs text-gray-300 font-semibold transition-all">
+                <i class="fa-solid fa-rotate-right mr-1.5"></i> Resetar Opções
+            </button>
+            <button onclick="executeAll()" class="flex-1 sm:flex-none px-5 py-2 rounded-xl bg-brand-red hover:bg-brand-darkred text-xs text-white font-bold shadow-red-glow transition-all">
+                <i class="fa-solid fa-play mr-1.5"></i> Executar Tudo
+            </button>
+            <button onclick="panicButton()" class="px-3 py-2 rounded-xl bg-red-950/60 border border-brand-red/50 hover:bg-brand-red text-xs text-red-400 hover:text-white transition-all" title="Desativar tudo emergencialmente">
+                <i class="fa-solid fa-power-off"></i>
+            </button>
+        </div>
+    </footer>
+
+    <!-- Audio feedback synth & Login Script -->
+    <script>
+        // Web Audio API for interactive sound effects
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const usernameInput = document.getElementById('login-username').value.trim();
+            const errorBox = document.getElementById('login-error');
+            const loginModal = document.getElementById('login-modal');
+
+            // Validation: Allows ANY username and ANY password typed
+            if (usernameInput.length > 0) {
+                errorBox.classList.add('hidden');
+                
+                // Dynamic username update
+                const displayUsername = usernameInput;
+                document.getElementById('display-user-name').innerText = displayUsername;
+                
+                // Update Avatar Initials
+                const initials = displayUsername.substring(0, 2).toUpperCase();
+                document.getElementById('display-avatar').src = `https://placehold.co/100x100/181820/ff003c?text=${initials}`;
+
+                // Play Success Audio Tone
+                playSuccessSound();
+
+                // Fade out login modal
+                loginModal.style.opacity = '0';
+                setTimeout(() => {
+                    loginModal.classList.add('hidden');
+                }, 500);
+            } else {
+                // Play Error Audio Tone if username field is empty
+                playErrorSound();
+                
+                // Show Error Alert
+                errorBox.classList.remove('hidden');
+            }
+        }
+
+        function playSuccessSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+            osc.frequency.exponentialRampToValueAtTime(659.25, audioCtx.currentTime + 0.15); // E5
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        function playErrorSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(110, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.25);
+        }
+
+        function playToggleSound() {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.08);
+
+            updateActiveCount();
+        }
+
+        function switchTab(tabName) {
+            // Hide all section contents
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            
+            // Remove active style from all tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-brand-red/20', 'text-white', 'border', 'border-brand-red/40', 'shadow-red-glow');
+                btn.classList.add('text-gray-400');
+            });
+
+            // Show selected section
+            document.getElementById('section-' + tabName).classList.remove('hidden');
+
+            // Highlight selected tab button
+            const activeTab = document.getElementById('tab-' + tabName);
+            activeTab.classList.add('bg-brand-red/20', 'text-white', 'border', 'border-brand-red/40', 'shadow-red-glow');
+            activeTab.classList.remove('text-gray-400');
+        }
+
+        function updateActiveCount() {
+            const count = document.querySelectorAll('.switch-checkbox:checked').length;
+            document.getElementById('active-count').innerText = count;
+        }
+
+        function resetSettings() {
+            document.querySelectorAll('.switch-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('slider-speed').value = 16;
+            document.getElementById('speed-val').innerText = '16 (Default)';
+            document.getElementById('slider-jump').value = 50;
+            document.getElementById('jump-val').innerText = '50 (Default)';
+            document.getElementById('slider-reach').value = 5;
+            document.getElementById('reach-val').innerText = '5 studs';
+            document.getElementById('slider-hitbox').value = 1;
+            document.getElementById('hitbox-val').innerText = '1x (Normal)';
+            if (document.getElementById('slider-fov')) {
+                document.getElementById('slider-fov').value = 120;
+                document.getElementById('fov-val').innerText = '120°';
+            }
+            updateActiveCount();
+        }
+
+        function panicButton() {
+            resetSettings();
+            alert('EMERGENCY UNHOOK TRIGGERED: All scripts detached and variables reset.');
+        }
+
+        function executeAll() {
+            alert('Executing active features into game client target memory...');
+        }
+
+        function assignKeybind(buttonElement) {
+            buttonElement.innerText = 'Press key...';
+            buttonElement.classList.add('border', 'border-brand-red', 'text-brand-red');
+
+            const handleKeyDown = (e) => {
+                const key = e.key.toUpperCase();
+                buttonElement.innerText = key === ' ' ? 'SPACE' : key;
+                buttonElement.classList.remove('border', 'border-brand-red', 'text-brand-red');
+                window.removeEventListener('keydown', handleKeyDown);
+            };
+
+            window.addEventListener('keydown', handleKeyDown);
+        }
+
+        // Global Keyboard Shortcut: Toggle dashboard visibility with '/'
+        window.addEventListener('keydown', function(e) {
+            // Ignore if user is currently typing inside an input field or textarea
+            const activeElement = document.activeElement;
+            const activeTag = activeElement ? activeElement.tagName : '';
+            if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') {
+                return;
+            }
+
+            if (e.key === '/' || e.code === 'Slash') {
+                e.preventDefault(); // Prevent browser search trigger
+                toggleDashboardVisibility();
+            }
+        });
+
+        function toggleDashboardVisibility() {
+            const mainContainer = document.getElementById('main-dashboard-container');
+            const hiddenIndicator = document.getElementById('panel-hidden-indicator');
+
+            if (!mainContainer) return;
+
+            if (mainContainer.classList.contains('hidden')) {
+                mainContainer.classList.remove('hidden');
+                hiddenIndicator.classList.add('hidden');
+            } else {
+                mainContainer.classList.add('hidden');
+                hiddenIndicator.classList.remove('hidden');
+            }
+        }
+
+        // Initialize active toggle count
+        updateActiveCount();
+    </script>
+</body>
+</html>
+```
